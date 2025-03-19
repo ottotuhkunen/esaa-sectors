@@ -1,88 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Map, { Source, Layer } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import sectorsGeoJson from './sectors.geojson';
 import tmaGeoJson from './tma.geojson';
 import firsJson from './firs.json';
+import aerodromesGeoJson from './aerodromes.geojson';
 
 const mapboxToken = 'pk.eyJ1Ijoib3R0b3R1aGt1bmVuIiwiYSI6ImNseG41dW9vaDAwNzQycXNleWI1MmowbHcifQ.1ZMRPeOQ7z9GRzKILnFNAQ';
 
-const controllerList = [
-  'EFIN_A_CTR', 'EFIN_B_CTR', 'EFIN_C_CTR', 'EFIN_D_CTR', 'EFIN_E_CTR', 
-  'EFIN_F_CTR', 'EFIN_G_CTR', 'EFIN_H_CTR', 'EFIN_J_CTR', 'EFIN_K_CTR',
-  'EFIN_L_CTR', 'EFIN_M_CTR', 'EFIN_N_CTR', 'EFIN_V_CTR'
-];
-
-const sectorsOwnership = {
-  sector1: ['A', 'D', 'C'],
-  sector2: ['B', 'C', 'D'],
-  sector3: ['C', 'D'],
-  sector4: ['D', 'C'],
-  sector5: ['E', 'F', 'D', 'C'],
-  sector6: ['F', 'D', 'C'],
-  sector7: ['G', 'F', 'D', 'C'],
-  sector8: ['H', 'V', 'M', 'G', 'F', 'D'],
-  sector9: ['J', 'H', 'V', 'M', 'G', 'F', 'D'],
-  sector10: ['K', 'M', 'G', 'F', 'D', 'C'],
-  sector11: ['L', 'N', 'M', 'G', 'F', 'D', 'C'],
-  sector12: ['M', 'G', 'F', 'D', 'C'],
-  sector13: ['N', 'M', 'G', 'F', 'D', 'C'],
-  sector14: ['V', 'M', 'G', 'F', 'D', 'C']
-};
-
-// Dark-themed colors for controllers
-const controllerColors = {
-  'EFIN_A_CTR': '#2f4f4f',      // darkslategray
-  'EFIN_B_CTR': '#8b0000',      // darkred
-  'EFIN_C_CTR': '#ff8c00',      // darkorange
-  'EFIN_D_CTR': '#00bfff',      // midnightblue
-  'EFIN_E_CTR': '#ffff00',      // yellow
-  'EFIN_F_CTR': '#006400',      // darkgreen
-  'EFIN_G_CTR': '#00ff00',      // lime
-  'EFIN_H_CTR': '#deb887',      // burlywood
-  'EFIN_J_CTR': '#0000cd',      // mediumblue
-  'EFIN_K_CTR': '#dda0dd',      // plum
-  'EFIN_L_CTR': '#191970',      // deepskyblue
-  'EFIN_M_CTR': '#ff1493',      // deeppink
-  'EFIN_N_CTR': '#98fb98',      // palegreen
-  'EFIN_V_CTR': '#ff4500'       // orange red
-};
-
-
-const controllerLabels = {
-  'EFIN_A_CTR': 'EFIN A',
-  'EFIN_B_CTR': 'EFIN B',
-  'EFIN_C_CTR': 'EFIN C',
-  'EFIN_D_CTR': 'EFIN D',
-  'EFIN_E_CTR': 'EFIN E',
-  'EFIN_F_CTR': 'EFIN F',
-  'EFIN_G_CTR': 'EFIN G',
-  'EFIN_H_CTR': 'EFIN H',
-  'EFIN_J_CTR': 'EFIN J',
-  'EFIN_K_CTR': 'EFIN K',
-  'EFIN_L_CTR': 'EFIN L',
-  'EFIN_M_CTR': 'EFIN M',
-  'EFIN_N_CTR': 'EFIN N',
-  'EFIN_V_CTR': 'EFIN V'
-};
-
-
-// Determine which controller owns the sector
-const getSectorOwner = (sectorCode, onlineControllers) => {
-  const sectorControllers = sectorsOwnership[sectorCode];
-  for (let controller of sectorControllers) {
-    const callsign = `EFIN_${controller}_CTR`;
-    if (onlineControllers.includes(callsign)) {
-      return callsign;
-    }
-  }
-  return null;
-};
-
 const App = () => {
-  const [onlineControllers, setOnlineControllers] = useState(['EFIN_D_CTR']);
+  const [onlineControllers, setOnlineControllers] = useState(['ESAA']);
+  const [selectedPreset, setSelectedPreset] = useState(null);
+  const [displayOption, setDisplayOption] = useState('ALL');
+  const [showAccLabels, setShowAccLabels] = useState(true);
+  const [showAerodromes, setShowAerodromes] = useState(false);
+  const [altitude, setAltitude] = useState(340);
+  const [config, setConfig] = useState(null);
+
+  useEffect(() => {
+    fetch('https://ottotuhkunen.github.io/esaa-sector-map-configuration/config.json')
+      .then(response => response.json())
+      .then(data => setConfig(data))
+      .catch(error => console.error('Error fetching config:', error));
+  }, []);
+
+  if (!config) {
+    return <div>Loading...</div>;
+  }
+
+  const { controllerList, sectorsOwnership, presets, connectGroupWithRealSectors } = config;
+
+  const getSectorOwner = (sectorCode, onlineControllers) => {
+    const sectorControllers = sectorsOwnership[sectorCode];
+    for (let controller of sectorControllers) {
+      if (onlineControllers.includes(controller)) {
+        return controller;
+      }
+    }
+    return null;
+  };
 
   const toggleController = (callsign) => {
+    setSelectedPreset(null);
     setOnlineControllers(prev =>
       prev.includes(callsign)
         ? prev.filter(c => c !== callsign)
@@ -90,53 +49,64 @@ const App = () => {
     );
   };
 
-  // Determine the color for each sector based on the controller
+  const applyPreset = (presetControllers, presetName) => {
+    setOnlineControllers(presetControllers);
+    setSelectedPreset(presetName);
+  };
+
   const getSectorFillColor = (sectorCode) => {
     const owner = getSectorOwner(sectorCode, onlineControllers);
-    return owner ? controllerColors[owner] : 'rgb(50, 50, 50)'; // dark gray as default
+    const controller = controllerList.find(c => c.name === owner);
+    return owner ? controller.color : 'rgb(255, 255, 255)'; // default
+  };
+
+  const toggleDisplay = () => {
+    setDisplayOption(prev =>
+      prev === 'UPPER' ? 'LOWER' : prev === 'LOWER' ? 'ALL' : 'UPPER'
+    );
   };
 
   return (
-      <div style={{ height: '100vh', backgroundColor: '#1e1e1e', color: '#ffffff' }}>
+    <div style={{ height: '100vh', backgroundColor: '#1e1e1e', color: '#ffffff' }}>
       {/* Controller buttons */}
-      <div style={{ 
-        padding: '10px', 
-        display: 'flex', 
-        flexWrap: 'wrap', 
-        background: '#333', 
-        justifyContent: 'center', // Center buttons horizontally
-        alignItems: 'center'      // Center buttons vertically
+      <div style={{
+        padding: '4px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        background: '#646464',
+        justifyContent: 'center',
+        alignItems: 'center'
       }}>
         {controllerList.map((controller) => (
           <button
-            key={controller}
+            key={controller.name}
             style={{
-              margin: '5px',
-              padding: '10px',
-              background: onlineControllers.includes(controller) ? controllerColors[controller] : '#555555',
-              color: onlineControllers.includes(controller) ? '#000000' : '#ffffff',
-              fontWeight: onlineControllers.includes(controller) ? 'bold' : 'normal',
+              margin: '4px',
+              padding: '8px',
+              background: onlineControllers.includes(controller.name) ? controller.color : '#2b2d31',
+              color: onlineControllers.includes(controller.name) ? 'black' : '#9e9e9e',
+              fontWeight: onlineControllers.includes(controller.name) ? 'bold' : 'normal',
               border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              width: '80px',
+              fontSize: '9pt'
             }}
-            onClick={() => toggleController(controller)}
+            onClick={() => toggleController(controller.name)}
           >
-            {controllerLabels[controller]}
+            {controller.name}
           </button>
         ))}
-
       </div>
 
       {/* Map and sectors */}
       <Map
         initialViewState={{
-          longitude: 25,
-          latitude: 65,
-          zoom: 4
+          longitude: 18,
+          latitude: 62,
+          zoom: 3.8
         }}
-        style={{ width: '100%', height: '90%' }}
-        mapStyle="mapbox://styles/mapbox/dark-v10"  // Dark theme map
+        style={{ width: '100%', height: '90%', zIndex: '0' }}
+        mapStyle="mapbox://styles/ottotuhkunen/cm8g2jfyj00yv01sa0tvx4vof"
         mapboxAccessToken={mapboxToken}
       >
         {/* TMA geojson */}
@@ -147,8 +117,24 @@ const App = () => {
             paint={{
               'line-color': '#00bfff',
               'line-width': 0.8,
-              'line-dasharray': [4, 2]
+              'line-dasharray': [2, 2],
+              'line-opacity': 0.5
             }}
+          />
+          <Layer
+            id="tma-labels"
+            type="symbol"
+            layout={{
+              'text-field': ['get', 'NAMEOFAREA'],
+              'text-font': ['Open Sans Regular'],
+              'text-size': 10,
+            }}
+            paint={{
+              'text-color': '#1a475f',
+              'text-halo-color': 'black',
+              'text-halo-width': 0.1
+            }}
+            minzoom={6}
           />
         </Source>
 
@@ -168,25 +154,22 @@ const App = () => {
           <Layer
             id="sectors-fill"
             type="fill"
+            filter={[
+              'all',
+              displayOption === 'ALL'
+                ? ['in', ['get', 'VERTICALFILTER'], ['literal', ['UPPER', 'LOWER']]]
+                : ['==', ['get', 'VERTICALFILTER'], displayOption],
+              ['>=', altitude, ['get', 'LOWER']],
+              ['<=', altitude, ['get', 'UPPER']]
+            ]}
             paint={{
               'fill-color': [
                 'match',
-                ['get', 'code'],
-                'sector1', getSectorFillColor('sector1'),
-                'sector2', getSectorFillColor('sector2'),
-                'sector3', getSectorFillColor('sector3'),
-                'sector4', getSectorFillColor('sector4'),
-                'sector5', getSectorFillColor('sector5'),
-                'sector6', getSectorFillColor('sector6'),
-                'sector7', getSectorFillColor('sector7'),
-                'sector8', getSectorFillColor('sector8'),
-                'sector9', getSectorFillColor('sector9'),
-                'sector10', getSectorFillColor('sector10'),
-                'sector11', getSectorFillColor('sector11'),
-                'sector12', getSectorFillColor('sector12'),
-                'sector13', getSectorFillColor('sector13'),
-                'sector14', getSectorFillColor('sector14'),
-                'rgb(50, 50, 50)' // Default color (dark gray)
+                ['get', 'NAMEOFAREA'],
+                ...Object.entries(connectGroupWithRealSectors).flatMap(([key, values]) =>
+                  values.flatMap(value => [value, getSectorFillColor(key)])
+                ),
+                'rgb(255, 255, 255)' // Default color
               ],
               'fill-opacity': 0.3
             }}
@@ -194,14 +177,161 @@ const App = () => {
           <Layer
             id="sectors-border"
             type="line"
+            filter={[
+              'all',
+              displayOption === 'ALL'
+                ? ['in', ['get', 'VERTICALFILTER'], ['literal', ['UPPER', 'LOWER']]]
+                : ['==', ['get', 'VERTICALFILTER'], displayOption],
+              ['>=', altitude, ['get', 'LOWER']],
+              ['<=', altitude, ['get', 'UPPER']]
+            ]}
             paint={{
               'line-color': 'gray',
               'line-width': 1
             }}
           />
+          {showAccLabels && (
+            <Layer
+              id="acc-labels"
+              type="symbol"
+              filter={[
+                'all',
+                displayOption === 'ALL'
+                  ? ['in', ['get', 'VERTICALFILTER'], ['literal', ['UPPER', 'LOWER']]]
+                  : ['==', ['get', 'VERTICALFILTER'], displayOption],
+                ['>=', altitude, ['get', 'LOWER']],
+                ['<=', altitude, ['get', 'UPPER']]
+              ]}
+              layout={{
+                'text-field': ['concat', ['get', 'NAMEOFAREA'], '\n', ['get', 'LOWER'], ' - ', ['get', 'UPPER']],
+                'text-font': ['Open Sans Bold'],
+                'text-size': 10,
+              }}
+              paint={{
+                'text-color': 'black',
+                'text-halo-color': 'white',
+                'text-halo-width': 0.6
+              }}
+              minzoom={4}
+            />
+          )}
         </Source>
 
+        {/* Aerodromes layer */}
+        {showAerodromes && (
+          <Source type="geojson" data={aerodromesGeoJson}>
+            <Layer
+              id="aerodromes"
+              type="symbol"
+              layout={{
+                'text-field': ['concat', '+ ', ['get', 'icao']],
+                'text-font': ['Open Sans Regular'],
+                'text-size': 9,
+                'text-anchor': 'left',
+                'text-offset': [0, 0] 
+              }}
+              paint={{
+                'text-color': '#666666',
+                'text-halo-color': 'white',
+                'text-halo-width': 0
+              }}
+            />
+          </Source>
+        )}
+
+        {/* Toggle button for Upper/Lower/All sectors */}
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          right: '0',
+          zIndex: 1,
+          userSelect: 'none',
+          backgroundColor: '#dddddd',
+          padding: '10px',
+          width: '136px'
+          }}>
+          <label style={{ color: 'black', fontSize: '9pt'}}>
+            <input
+              type="checkbox"
+              checked={showAccLabels}
+              onChange={() => setShowAccLabels(!showAccLabels)}
+              style={{ marginRight: '5px' }}
+            />
+            Show Sector Names
+          </label>
+          <br />
+          <label style={{ color: 'black', fontSize: '9pt'}}>
+            <input
+              type="checkbox"
+              checked={showAerodromes}
+              onChange={() => setShowAerodromes(!showAerodromes)}
+              style={{ marginRight: '5px' }}
+            />
+            Show Aerodromes
+          </label>
+        </div>
+
+        {/* Altitude slider */}
+        <div style={{
+          position: 'absolute',
+          top: '80px',
+          right: '0',
+          zIndex: 1,
+          userSelect: 'none',
+          backgroundColor: '#dddddd',
+          padding: '10px',
+          width: '136px'
+        }}>
+          <p style={{ color: 'black', textAlign: 'center', marginTop: '0'}}>
+            Filter Sectors by FL</p>
+          <input
+            type="range"
+            min="0"
+            max="660"
+            step="10"
+            value={altitude}
+            onChange={(e) => setAltitude(Number(e.target.value))}
+            style={{ width: '138px', margin: '0px'}}
+          />
+          <div style={{ textAlign: 'center', color: 'black' }}>
+            FL {altitude}
+          </div>
+        </div>
+
       </Map>
+
+      {/* Preset buttons */}
+      <div style={{
+        padding: '4px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        background: '#646464',
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'fixed',
+        width: '100%',
+        bottom: '0'
+      }}>
+        {presets.map((preset, index) => (
+          <button
+            key={index}
+            style={{
+              margin: '4px',
+              padding: '8px',
+              background: selectedPreset === preset.name ? '#dddddd' : '#2b2d31',
+              color: selectedPreset === preset.name ? 'black' : '#9e9e9e',
+              fontWeight: selectedPreset === preset.name ? 'bold' : 'normal',
+              border: 'none',
+              cursor: 'pointer',
+              width: '100px',
+              fontSize: '9pt'
+            }}
+            onClick={() => applyPreset(preset.controllers, preset.name)}
+          >
+            {preset.name}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
