@@ -1,0 +1,20 @@
+{
+  "files": {
+    "main.css": "/esaa-sectors/static/css/main.6345f400.css",
+    "main.js": "/esaa-sectors/static/js/main.ec496b51.js",
+    "static/js/879.30768d6d.chunk.js": "/esaa-sectors/static/js/879.30768d6d.chunk.js",
+    "static/js/453.a02a7e64.chunk.js": "/esaa-sectors/static/js/453.a02a7e64.chunk.js",
+    "static/media/tma.geojson": "/esaa-sectors/static/media/tma.d2c350470412d1979b41.geojson",
+    "static/media/sectors.geojson": "/esaa-sectors/static/media/sectors.32d7d7226faff643df0f.geojson",
+    "static/media/aerodromes.geojson": "/esaa-sectors/static/media/aerodromes.f55958c4d0b29302cccb.geojson",
+    "index.html": "/esaa-sectors/index.html",
+    "main.6345f400.css.map": "/esaa-sectors/static/css/main.6345f400.css.map",
+    "main.ec496b51.js.map": "/esaa-sectors/static/js/main.ec496b51.js.map",
+    "879.30768d6d.chunk.js.map": "/esaa-sectors/static/js/879.30768d6d.chunk.js.map",
+    "453.a02a7e64.chunk.js.map": "/esaa-sectors/static/js/453.a02a7e64.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.6345f400.css",
+    "static/js/main.ec496b51.js"
+  ]
+}
