@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.css": "/static/css/main.58c0f21b.css",
+    "main.css": "/static/css/main.70e11604.css",
     "main.js": "/static/js/main.c0dce3b2.js",
     "static/js/879.ba583311.chunk.js": "/static/js/879.ba583311.chunk.js",
     "static/js/453.a02a7e64.chunk.js": "/static/js/453.a02a7e64.chunk.js",
@@ -8,13 +8,13 @@
     "static/media/sectors.geojson": "/static/media/sectors.32d7d7226faff643df0f.geojson",
     "static/media/aerodromes.geojson": "/static/media/aerodromes.f55958c4d0b29302cccb.geojson",
     "index.html": "/index.html",
-    "main.58c0f21b.css.map": "/static/css/main.58c0f21b.css.map",
+    "main.70e11604.css.map": "/static/css/main.70e11604.css.map",
     "main.c0dce3b2.js.map": "/static/js/main.c0dce3b2.js.map",
     "879.ba583311.chunk.js.map": "/static/js/879.ba583311.chunk.js.map",
     "453.a02a7e64.chunk.js.map": "/static/js/453.a02a7e64.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.58c0f21b.css",
+    "static/css/main.70e11604.css",
     "static/js/main.c0dce3b2.js"
   ]
 }
